@@ -75,11 +75,17 @@ String inline readSIM800L(){
  */
 uint8_t inline initSIM800L() {
   SerialGsm.print(F("AT\r\n"));
-  while (readSIM800L().indexOf("OK")==-1 ){
+  int tries = 0;
+  while(readSIM800L().indexOf("OK")==-1 ) {
+    if(++tries>6) break;
     SerialGsm.print(F("AT\r\n"));
     Serial.print(".");
   }
   Serial.println();
+  if(tries>6) {
+    Serial.println("CRIT: NO RESPONE ON SerialGsm() IN 60 seconds!");
+    return false;
+  }
   SerialGsm.print(F("AT+GMM\r\n"));
   String response = readSIM800L();
   if(response.indexOf("SIMCOM_SIM800L\r\n\r\nOK")==-1) {
@@ -88,6 +94,10 @@ uint8_t inline initSIM800L() {
   }
   Serial.println("INFO: GSM SIM800L READY");
   return true;
+}
+
+void poweroffSIM800L() {
+  SerialGsm.print(F("AT+CPOWD=1\r\n"));
 }
 
 /*
@@ -269,8 +279,8 @@ void setup() {
   pinMode(LED_BUILTIN, OUTPUT);     // alarm LED setup
   digitalWrite(LED_BUILTIN, 1);     // alarm LED off
 
-#if (BEEP)
   pinMode(PIN_PWR_ALARM, OUTPUT);   // alarm beeper setup
+#if (BEEP)
   analogWriteFreq(8820);            // alarm beeper freq (Hz)
   analogWrite(PIN_PWR_ALARM, 0);    // alarm beeper off
 #endif
@@ -288,15 +298,20 @@ void setup() {
 
   interrupts();
 
+  if(initSIM800L()) {
 #if (BEEP)
-  if (initSIM800L()) {
     beepOK();
-  } else {
-    beepERROR();
-  }
-#else
-  initSIM800L();
 #endif
+  } else {
+    while(true) {
+      analogWrite(PIN_PWR_ALARM, 128); delay( 50);
+      analogWrite(PIN_PWR_ALARM,   0); delay(100);
+      analogWrite(PIN_PWR_ALARM, 128); delay( 50);
+      analogWrite(PIN_PWR_ALARM,   0); delay(100);
+      analogWrite(PIN_PWR_ALARM, 128); delay( 50);
+      analogWrite(PIN_PWR_ALARM,   0); delay(650);
+    }
+  }
 
   alarm_destination = readEEPROM(0);
   alarm_message     = readEEPROM(20);
@@ -350,17 +365,27 @@ void loop() {
 
   if(!power & !alerted) {
     beepERROR();
-    Serial.println("CRIT: POWERLOSS, Vbat: " + String(analogRead(PIN_BAT_VOLT) / BAT_DIVIDER, 2) + "v");
-    // TODO: Wait X seconds before sendSMS()
-    if(sendSMS(alarm_destination, alarm_message)) {
-      Serial.println("INFO: SMS sent");
-      beeper  = false;                             // beeper alarm off
-      alerted = true;
-      beepOK();                                    // beep confirmation
+    float voltage = analogRead(PIN_BAT_VOLT) / BAT_DIVIDER;
+    Serial.println("CRIT: POWERLOSS, Vbat: " + String(voltage, 2) + "v");
+    if(voltage>3.3F) {
+      // TODO: Wait X seconds before sendSMS()
+      if(sendSMS(alarm_destination, alarm_message)) {
+        Serial.println("INFO: SMS sent");
+        beeper  = false;                             // beeper alarm off
+        alerted = true;
+        beepOK();                                    // beep confirmation
+      } else  {
+        Serial.println("ERRR: Couldn't send SMS!");
+        beeper  = true;                              // beeper alarm on
+        alerted = false;
+      }
     } else {
-      Serial.println("ERRR: Couldn't send SMS!");
-      beeper  = true;                              // beeper alarm on
-      alerted = false;
+      // TODO: can be removed when hardware protection is in place
+      beeper = true;                                 // beeper alarm on
+      Serial.println("CRIT: LOW BATTERY, Vbat: " + String(voltage, 2) + "v");
+      Serial.println("                   SIM800L EMERGENCY SHUTDOWN");
+      poweroffSIM800L();
+      alerted = true;
     }
     recovered = false;
   } else {

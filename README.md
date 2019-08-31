@@ -15,3 +15,8 @@ Sense power loss at home (fluse flipped) and signalize by SMS the blackout to al
 7. D1 mini ProtoBoard
 8. SIM800L core breakout
 9. Piezo Ceramic Wafer Plate
+
+## TODO
+
+1. Hardware SIM800L cutoff on low battery
+2. Alert confirm button to turn off beeper
