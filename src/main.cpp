@@ -74,6 +74,8 @@ String inline readSIM800L(){
  *         false if SIM800L wans't found
  */
 uint8_t inline initSIM800L() {
+  String response;
+
   SerialGsm.print(F("AT\r\n"));
   int tries = 0;
   while(readSIM800L().indexOf("OK")==-1 ) {
@@ -86,13 +88,36 @@ uint8_t inline initSIM800L() {
     Serial.println("CRIT: NO RESPONE ON SerialGsm() IN 60 seconds!");
     return false;
   }
+
   SerialGsm.print(F("AT+GMM\r\n"));
-  String response = readSIM800L();
+  response = readSIM800L();
   if(response.indexOf("SIMCOM_SIM800L\r\n\r\nOK")==-1) {
     Serial.println("WARN: GOT ...\r\n"+response+"... but expected 'SIMCOM_SIM800L'.");
     return false;
+  } else {
+    Serial.println("INFO: FOUND GSM SIM800L.");
   }
+
+  SerialGsm.print(F("AT+CPIN?\r\n"));
+  response = readSIM800L();
+  if(response.indexOf("+CPIN: READY\r\n\r\nOK")==-1) {
+    Serial.println("CRIT: GOT ...\r\n"+response+"... but expected '+CPIN: READY'.");
+    return false;
+  } else {
+    Serial.println("      - SIM unlocked and ready.");
+  }
+
+  SerialGsm.print(F("AT+CREG?\r\n"));
+  response = readSIM800L();
+  if(response.indexOf("+CREG: 0,1\r\n\r\nOK")==-1) {
+    Serial.println("CRIT: GOT ...\r\n"+response+"... but expected '+CREG: 0,1'.");
+    return false;
+  } else {
+    Serial.println("      - Registered at home network w/ unsolicited result codes disabled.");
+  }
+
   Serial.println("INFO: GSM SIM800L READY");
+
   return true;
 }
 
@@ -116,14 +141,12 @@ uint8_t inline sendSMS(String number, String text) {
   SerialGsm.print(F("\"\r\n"));       
   Serial.println(readSIM800L());
   SerialGsm.print (text);
-  SerialGsm.print ("\r\n"); 
   SerialGsm.print((char)26);
-  Serial.println(readSIM800L());
-  //String _buffer = readSIM800L();
+  String _buffer = readSIM800L();
   //expect CMGS:xxx   , where xxx is a number,for the sending sms.
-  /*if (((_buffer.indexOf("CMGS") ) != -1 ) ){
+  if (((_buffer.indexOf("CMGS") ) != -1 ) ){
     return true;
-  }*/
+  }
   return false;
 }
 
@@ -185,7 +208,7 @@ String readEEPROM(int addr)
 
 void setAlertShortMessage() {
   Serial.println("! Enter alert message (e.g. BLACKOUT AT HOME!)");
-  Serial.println("! and end you input with <CR> (20s timeout!)");
+  Serial.println("! and end you input with # (20s timeout!)");
   Serial.println("! Current alert message is: " + alarm_message);
   beepERROR();
   Serial.print("> ");
@@ -198,15 +221,21 @@ void setAlertShortMessage() {
     timeout++;
     int input_char = Serial.read();
     if(input_char!=-1) {
-      Serial.write(input_char);
-      new_alarm_message += (char) input_char;
       if(new_alarm_message.length()>max_num) {
         break;
       }
+      if(input_char=='#') {
+        break;
+      }
+      Serial.write(input_char);
+      new_alarm_message += (char) input_char;
     }
   }
   if(new_alarm_message.length()>max_num) {
     Serial.println("WARN: Too many characters (max: "+String(max_num)+"). Alert message unchanged!");
+    beepERROR();
+  } else if(new_alarm_message.length()==0) {
+    Serial.println("WARN: No input. Alert message unchanged!");
     beepERROR();
   } else if(timeout>=INPUT_TIMEOUT) {
     Serial.println("WARN: response timeout ocurred. Alert message unchanged!");
@@ -221,19 +250,21 @@ void setAlertShortMessage() {
 }
 
 void printHelp() {
-  Serial.println("INFO: PRESS 's' for (s)tatus information (Vbat, alert mobile number and msgs).");
-  Serial.println("            'n' to set new alert mobile (n)umber for alert message.");
-  Serial.println("                e.g. 612345678 or 00491517346592");
+  Serial.print("INFO: PRESS ");
+  Serial.println(            "'b' (b)oot reason.");
+  Serial.println("            'h' show this (h)elp.");
   Serial.println("            'm' to set new alert short (m)essage.");
   Serial.println("                e.g. BLACKOUT AT HOME!");
+  Serial.println("            'n' to set new alert mobile (n)umber for alert message.");
+  Serial.println("                e.g. 612345678 or 00491517346592");
+  Serial.println("            's' for (s)tatus information (Vbat, alert mobile number and msgs).");
   Serial.println("            't' to set send (t)est alert message.");
-  Serial.println("            'h' show this (h)elp.");
   Serial.println("      All other chars will be send to SIM800L (e.g. AT<CR>).");
 }
 
 void setAlertMobileNumber() {
   Serial.println("! Enter alert mobile number (e.g. 612345678)");
-  Serial.println("! and end you input with <CR> (20s timeout!)");
+  Serial.println("! and end you input with # (20s timeout!)");
   Serial.println("! Current alert mobile number is: " + alarm_destination);
   beepERROR();
   Serial.print("> ");
@@ -246,17 +277,21 @@ void setAlertMobileNumber() {
     timeout++;
     int input_char = Serial.read();
     if(input_char!=-1) {
-      if ((input_char>47)&(input_char<58)) {
-        Serial.write(input_char);
-        new_alarm_destination += (char) input_char;
+      if((input_char>47)&(input_char<58)) {
         if(new_alarm_destination.length()>max_num) {
           break;
         }
+        Serial.write(input_char);
+        new_alarm_destination += (char) input_char;
       }
+      if(input_char=='#') break;
     }
   }
   if(new_alarm_destination.length()>max_num) {
     Serial.println("WARN: Too many numbers (max: "+String(max_num)+"). Alert mobile number unchanged!");
+    beepERROR();
+  } else if(new_alarm_destination.length()==0) {
+    Serial.println("WARN: No input. Alert mobile number unchanged!");
     beepERROR();
   } else if(timeout>=INPUT_TIMEOUT) {
     Serial.println("WARN: response timeout ocurred. Alert mobile number unchanged!");
@@ -313,24 +348,46 @@ void setup() {
     }
   }
 
-  alarm_destination = readEEPROM(0);
-  alarm_message     = readEEPROM(20);
+  alarm_destination = "";
+  alarm_message     = "";
+
+  while(alarm_destination.length()==0) alarm_destination = readEEPROM(0);
+  while(alarm_message.length()==0    ) alarm_message     = readEEPROM(20);
 
   if(power) {
-    Serial.println("INFO: Power: OK, Vbat: " + String(analogRead(PIN_BAT_VOLT) / BAT_DIVIDER, 2) + "v");
+    Serial.println("INFO: POWER: OK, Vbat: " + String(analogRead(PIN_BAT_VOLT) / BAT_DIVIDER, 2) + "v");
   } else {
-    Serial.println("CRIT: Power: NO, Vbat: " + String(analogRead(PIN_BAT_VOLT) / BAT_DIVIDER, 2) + "v");
+    Serial.println("CRIT: NO POWER!, Vbat: " + String(analogRead(PIN_BAT_VOLT) / BAT_DIVIDER, 2) + "v");
+    Serial.println("WARN: ONLY VISUAL ALERT (NO BEEPER, NO ALERT SMS)");
+    alerted = true;
   }
   printHelp();
 }
 
 void loop() {
-
+  
   if (SerialGsm.available()) { Serial.write(SerialGsm.read()); }
   if (Serial.available()) { 
     char cmd = Serial.read();
 
     switch (cmd) {
+      case 'b': // (b)oot cause
+        rst_info *resetInfo;
+        resetInfo = ESP.getResetInfoPtr();
+        Serial.print("INFO: Reset reason => ");
+        switch(resetInfo->reason)
+          {
+            case 0 : Serial.println ("normal startup by power on");break;
+            case 1 : Serial.println ("hardware watch dog reset");break;
+            case 2 : Serial.println ("exception reset, GPIO status won’t change");break;
+            case 3 : Serial.println ("software watch dog reset, GPIO status won’t change");break;
+            case 4 : Serial.println ("software restart ,system_restart , GPIO status won’t change");break;
+            case 5 : Serial.println ("wake up from deep-sleep");break;
+            case 6 : Serial.println ("external system reset");break;
+            default : Serial.println ("UNKNOWN");
+          }
+        beepOK();
+        break;
       case 'h': // show (h)elp menu
         printHelp();
         beepOK();
