@@ -61,7 +61,7 @@ String inline readSIM800L(){
     delay(13);
     timeout++;
   }
-  if (SerialGsm.available()) {
+  if(SerialGsm.available()) {
  	  return SerialGsm.readString();
   }
   return "";
@@ -144,7 +144,7 @@ uint8_t inline sendSMS(String number, String text) {
   SerialGsm.print((char)26);
   String _buffer = readSIM800L();
   //expect CMGS:xxx   , where xxx is a number,for the sending sms.
-  if (((_buffer.indexOf("CMGS") ) != -1 ) ){
+  if(((_buffer.indexOf("CMGS") ) != -1 ) ){
     return true;
   }
   return false;
@@ -345,14 +345,22 @@ void setup() {
       analogWrite(PIN_PWR_ALARM,   0); delay(100);
       analogWrite(PIN_PWR_ALARM, 128); delay( 50);
       analogWrite(PIN_PWR_ALARM,   0); delay(650);
+      yield();
     }
   }
 
   alarm_destination = "";
   alarm_message     = "";
 
-  while(alarm_destination.length()==0) alarm_destination = readEEPROM(0);
-  while(alarm_message.length()==0    ) alarm_message     = readEEPROM(20);
+  while(alarm_destination.length()==0) {
+    alarm_destination = readEEPROM(0);
+    yield();
+  }
+
+  while(alarm_message.length()==0 ) {
+    alarm_message     = readEEPROM(20);
+    yield();
+  }
 
   if(power) {
     Serial.println("INFO: POWER: OK, Vbat: " + String(analogRead(PIN_BAT_VOLT) / BAT_DIVIDER, 2) + "v");
@@ -366,8 +374,8 @@ void setup() {
 
 void loop() {
   
-  if (SerialGsm.available()) { Serial.write(SerialGsm.read()); }
-  if (Serial.available()) { 
+  if(SerialGsm.available()) { Serial.write(SerialGsm.read()); }
+  if(Serial.available()) { 
     char cmd = Serial.read();
 
     switch (cmd) {
