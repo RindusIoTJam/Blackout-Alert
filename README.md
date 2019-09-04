@@ -1,12 +1,14 @@
 # Blackout Alert
 
+![motherboard with shields](https://raw.githubusercontent.com/RindusIoTJam/Blackout-Alert/master/doc/d1-bat-sim800l.jpg)
+
 ## Abstract
 
 Sense power loss at home (fluse flipped) and signalize by SMS the blackout to alert someone.
 
 ## Connection routing
 
-![alt text](https://raw.githubusercontent.com/RindusIoTJam/Blackout-Alert/master/doc/routing.png)
+![on shield soldering](https://raw.githubusercontent.com/RindusIoTJam/Blackout-Alert/master/doc/routing.png)
 
 1. Battery Voltage Level
 
