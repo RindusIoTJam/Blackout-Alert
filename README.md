@@ -29,6 +29,22 @@ Sense power loss at home (fluse flipped) and signalize by SMS the blackout to al
    - SIM800L:GND to proto-shield:GND
    - SIM800L:VCC to battery-shield:LiPo+
 
+## Setup
+
+Configuration can be done on the hardware serial at 115k2 8N1:
+
+```
+INFO: PRESS 'b' (b)oot reason.
+            'h' show this (h)elp.
+            'm' to set new alert short (m)essage.
+                e.g. BLACKOUT AT HOME!
+            'n' to set new alert mobile (n)umber for alert message.
+                e.g. 612345678 or 00491517346592
+            's' for (s)tatus information (Vbat, alert mobile number and msgs).
+            't' to set send (t)est alert message.
+      All other chars will be send to SIM800L (e.g. AT<CR>).
+```
+
 ## BOM
 
 1. Wemos D1 mini
@@ -40,8 +56,8 @@ Sense power loss at home (fluse flipped) and signalize by SMS the blackout to al
 7. D1 mini ProtoBoard
 8. SIM800L core breakout
 9. Piezo Ceramic Wafer Plate
+10. LiPo protection board (if not integrated in LiPo)
 
 ## TODO
 
-1. Hardware SIM800L cutoff on low battery
-2. Alert confirm button to turn off beeper
+1. Alert confirm button to turn off beeper

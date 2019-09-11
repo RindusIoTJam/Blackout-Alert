@@ -1,3 +1,5 @@
+#define SERIAL_BUFFER_SIZE 256
+
 #include <Arduino.h>
 #include <EEPROM.h>
 #include <ESP8266WiFi.h>
@@ -433,7 +435,7 @@ void loop() {
     float voltage = analogRead(PIN_BAT_VOLT) / BAT_DIVIDER;
     Serial.println("CRIT: POWERLOSS, Vbat: " + String(voltage, 2) + "v");
     if(voltage>3.3F) {
-      // TODO: Wait X seconds before sendSMS()
+      // TODO: Ensure AT+CFUN=1 (Full Function)
       if(sendSMS(alarm_destination, alarm_message)) {
         Serial.println("INFO: SMS sent");
         beeper  = false;                             // beeper alarm off
@@ -449,6 +451,7 @@ void loop() {
       beeper = true;                                 // beeper alarm on
       Serial.println("CRIT: LOW BATTERY, Vbat: " + String(voltage, 2) + "v");
       Serial.println("                   SIM800L EMERGENCY SHUTDOWN");
+      // TODO: Ensure AT+CFUN=4 instead (Disable phone both transmit and receive RF circuits.)
       poweroffSIM800L();
       alerted = true;
     }
