@@ -33,9 +33,11 @@ Sense power loss at home (fluse flipped) and signalize by SMS the blackout to al
 
 ## Setup
 
-Configuration can be done on the hardware serial at 115k2 8N1:
+Configuration can be done on the hardware serial (MicroUSB off D1 Mini board) at 115k2 8N1 with e.g. `screen` on a linux based computer or e.g. putty on Windows:
 
-```
+```bash
+$ screen /dev/ttyUSB0 115200
+
 INFO: PRESS 'b' (b)oot reason.
             'h' show this (h)elp.
             'm' to set new alert short (m)essage.
@@ -58,9 +60,16 @@ INFO: PRESS 'b' (b)oot reason.
 7. D1 mini ProtoBoard
 8. SIM800L core breakout
 9. Piezo Ceramic Wafer Plate
-10. LiPo protection board (if not integrated in LiPo)
+10. D1 mini Tripler Base
+11. LiPo protection board (if not integrated in LiPo)
 
 ## TODO
 
-1. Hardware SIM800L cutoff on low battery
-2. Alert confirm button to turn off beeper
+1. [x] Hardware SIM800L cutoff on low battery
+
+   D1 mini Protoboard now carries a LiPo protection board on the SIM800L power supply lines.
+
+2. [x] Alert confirm button to turn off beeper
+
+   D1 mini Tripler Base now carries a switch in between
+   D1 mini pin D6 and piezo.
